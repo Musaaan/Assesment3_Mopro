@@ -17,7 +17,6 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Path
-import retrofit2.http.Query
 
 private const val BASE_URL = "https://desain-api.michael-kaiser.my.id/api/"
 private val moshi = Moshi.Builder()
@@ -44,10 +43,22 @@ interface DesainApiService {
         @Part image: MultipartBody.Part
     ): OpStatus
 
+    @Multipart
+    @POST("desain/{id_desain}")
+    suspend fun updateDesain(
+        @Header("Authorization") token: String,
+        @Path("id_desain") idDesain: Long,
+        @Part("_method") method: RequestBody,
+        @Part("judul") judul: RequestBody,
+        @Part("luas") luas: RequestBody,
+        @Part("harga") harga: Double,
+        @Part image: MultipartBody.Part? = null
+    ): OpStatus
+
     @DELETE("desain/{id_desain}")
     suspend fun deleteDesain(
         @Header("Authorization") token: String,
-        @Path("id_desain") idDesain: String
+        @Path("id_desain") idDesain: Long
     ): OpStatus
 
     @FormUrlEncoded
