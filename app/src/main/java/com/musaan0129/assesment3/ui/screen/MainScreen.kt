@@ -69,15 +69,14 @@ import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.android.libraries.id_desainentity.googleid.GetGoogleIdOption
+import com.google.android.libraries.id_desainentity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.id_desainentity.googleid.GoogleIdTokenParsingException
 import com.musaan0129.assesment3.BuildConfig
 import com.musaan0129.assesment3.R
 import com.musaan0129.assesment3.model.Desain
 import com.musaan0129.assesment3.model.User
 import com.musaan0129.assesment3.network.ApiStatus
-import com.musaan0129.assesment3.network.HewanApi
 import com.musaan0129.assesment3.network.UserDataStore
 import com.musaan0129.assesment3.ui.theme.Mobpro1Theme
 import kotlinx.coroutines.CoroutineScope
@@ -94,12 +93,12 @@ fun MainScreen() {
     val errorMessage by viewModel.errorMessage
 
     var showDialog by remember { mutableStateOf(false) }
-    var showHewanDialog by remember { mutableStateOf(false) }
+    var showDesainDialog by remember { mutableStateOf(false) }
 
     var bitmap: Bitmap? by remember { mutableStateOf(null) }
     val launcher = rememberLauncherForActivityResult(CropImageContract()) {
         bitmap = getCroppedImage(context.contentResolver, it)
-        if (bitmap != null) showHewanDialog = true
+        if (bitmap != null) showDesainDialog = true
     }
     val deleteStatus by viewModel.deleteStatus
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -123,7 +122,7 @@ fun MainScreen() {
                 ),
                 actions = {
                     IconButton(onClick = {
-                        if (user.email.isEmpty()) {
+                        if (user.token.isEmpty()) {
                             CoroutineScope(Dispatchers.IO).launch {
                                 signIn(context, dataStore)
                             }
@@ -157,7 +156,7 @@ fun MainScreen() {
             }) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(id = R.string.tambah_hewan)
+                    contentDescription = stringResource(id = R.string.tambah_desain)
                 )
             }
         }
@@ -165,7 +164,7 @@ fun MainScreen() {
             innerPadding ->
         ScreenContent(
             viewModel,
-            userId = user.email,
+            token = user.token,
             modifier = Modifier.padding(innerPadding),
             onDeleteClick = { hewan ->
                 selectedDesain = hewan
@@ -183,12 +182,12 @@ fun MainScreen() {
                 showDialog = false
             }
         }
-        if (showHewanDialog) {
-            HewanDialog(
-                bitmap = bitmap,
-                onDismissRequest = { showHewanDialog = false }) { nama, namaLatin ->
-                viewModel.saveData(user.email, nama, namaLatin, bitmap!!)
-                showHewanDialog = false
+        if (showDesainDialog) {
+            DesainDialog(
+                desain = null,
+                onDismissRequest = { showDesainDialog = false }) { judul, luas, harga, bitmap ->
+                viewModel.saveData(user.token, judul, luas,harga, bitmap!!)
+                showDesainDialog = false
             }
         }
         if (showDeleteDialog && selectedDesain != null) {
@@ -199,7 +198,7 @@ fun MainScreen() {
                     selectedDesain = null
                 },
                 onConfirm = {
-                    viewModel.deleteData(user.email, selectedDesain!!.id)
+                    viewModel.deleteData(user.token, selectedDesain!!.id_desain)
                     showDeleteDialog = false
                     selectedDesain = null
                 }
@@ -213,12 +212,12 @@ fun MainScreen() {
 }
 
 @Composable
-fun ScreenContent(viewModel: MainViewModel, userId: String, onDeleteClick: (Desain) -> Unit, modifier: Modifier = Modifier) {
+fun ScreenContent(viewModel: MainViewModel, token: String, onDeleteClick: (Desain) -> Unit, modifier: Modifier = Modifier) {
     val data by viewModel.data
     val status by viewModel.status.collectAsState()
 
-    LaunchedEffect(userId) {
-        viewModel.retrieveData(userId)
+    LaunchedEffect(token) {
+        viewModel.retrieveData(token)
     }
 
     when(status){
@@ -254,7 +253,7 @@ fun ScreenContent(viewModel: MainViewModel, userId: String, onDeleteClick: (Desa
             ) {
                 Text(text = stringResource(id = R.string.error))
                 Button(
-                    onClick = {viewModel.retrieveData(userId)},
+                    onClick = {viewModel.retrieveData(token)},
                     modifier = Modifier.padding(top = 16.dp),
                     contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
                 ) {
@@ -291,7 +290,7 @@ private suspend fun handleSignIn(result: GetCredentialResponse, dataStore: UserD
         try {
             val googleId = GoogleIdTokenCredential.createFrom(credential.data)
             val nama = googleId.displayName ?: ""
-            val email = googleId.id
+            val email = googleId.id_desain
             val photoUrl = googleId.profilePictureUri.toString()
             dataStore.saveData(
                 User(
