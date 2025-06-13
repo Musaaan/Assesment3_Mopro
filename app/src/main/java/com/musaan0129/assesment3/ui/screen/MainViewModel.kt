@@ -5,9 +5,9 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.junior0028.assesment3.model.Hewan
-import com.junior0028.assesment3.network.ApiStatus
-import com.junior0028.assesment3.network.HewanApi
+import com.musaan0129.assesment3.model.Desain
+import com.musaan0129.assesment3.network.ApiStatus
+import com.musaan0129.assesment3.network.DesainApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -17,7 +17,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
 
 class MainViewModel: ViewModel() {
-    var data = mutableStateOf(emptyList<Hewan>())
+    var data = mutableStateOf(emptyList<Desain>())
         private set
     var status = MutableStateFlow(ApiStatus.LOADING)
         private set
@@ -26,11 +26,11 @@ class MainViewModel: ViewModel() {
     var deleteStatus = mutableStateOf<String?>(null)
         private set
 
-    fun retrieveData(userId: String) {
+    fun retrieveData(token: String) {
         viewModelScope.launch(Dispatchers.IO) {
             status.value = ApiStatus.LOADING
             try {
-                data.value = HewanApi.service.getHewan(userId)
+                data.value = DesainApi.service.getDesain(token)
                 status.value = ApiStatus.SUCCESS
             } catch (e: Exception) {
                 Log.d("MainViewModel", "Failure: ${e.message}")
@@ -39,18 +39,19 @@ class MainViewModel: ViewModel() {
         }
     }
 
-    fun saveData(userId: String, nama: String, namaLatin: String, bitmap: Bitmap) {
+    fun saveData(token: String, judul: String, luas: String, harga: Double, bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = HewanApi.service.postHewan(
-                    userId,
-                    nama.toRequestBody("text/plain".toMediaTypeOrNull()),
-                    namaLatin.toRequestBody("text/plain".toMediaTypeOrNull()),
+                val result = DesainApi.service.postDesain(
+                    token,
+                    judul.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    luas.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    harga,
                     bitmap.toMultipartBody()
                 )
 
                 if (result.status == "success")
-                    retrieveData(userId)
+                    retrieveData(token)
                 else
                     throw Exception(result.message)
             } catch (e: Exception) {
@@ -60,12 +61,12 @@ class MainViewModel: ViewModel() {
         }
     }
 
-    fun deleteData(userId: String, hewanId: String) {
+    fun deleteData(token: String, desainId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = HewanApi.service.deleteHewan(userId, hewanId)
+                val result = DesainApi.service.deleteDesain(token, desainId)
                 if (result.status == "success") {
-                    retrieveData(userId)
+                    retrieveData(token)
                 } else {
                     deleteStatus.value = result.message ?: "Gagal menghapus data"
                 }
