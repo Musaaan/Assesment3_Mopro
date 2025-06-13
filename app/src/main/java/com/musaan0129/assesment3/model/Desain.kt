@@ -1,9 +1,9 @@
 package com.musaan0129.assesment3.model
 
 data class Desain(
-    val id: String,
-    val nama: String,
-    val namaLatin: String,
-    val imageId: String,
+    val id_desain: Long,
+    val judul: String,
+    val luas: String,
+    val harga: Double,
     val mine: Int
 )
