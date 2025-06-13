@@ -5,5 +5,5 @@ data class Desain(
     val judul: String,
     val luas: String,
     val harga: Double,
-    val mine: Int
+    val mine: String
 )
