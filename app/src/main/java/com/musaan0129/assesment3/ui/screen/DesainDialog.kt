@@ -58,7 +58,6 @@ fun DesainDialog(
 ) {
     val context = LocalContext.current
 
-
     var judul by remember { mutableStateOf("") }
     var luas by remember { mutableStateOf("") }
     var harga by remember { mutableStateOf("") }
@@ -66,6 +65,12 @@ fun DesainDialog(
     var bitmap: Bitmap? by remember { mutableStateOf(null) }
     val launcher = rememberLauncherForActivityResult(CropImageContract()) {
         bitmap = getCroppedImage(context.contentResolver, it)
+    }
+
+    if (desain != null) {
+        judul = desain.judul
+        luas = desain.luas
+        harga = desain.harga.toString()
     }
 
     Dialog(onDismissRequest = { onDismissRequest() }) {
