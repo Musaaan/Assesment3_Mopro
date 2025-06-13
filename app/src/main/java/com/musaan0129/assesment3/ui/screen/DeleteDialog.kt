@@ -20,7 +20,7 @@ fun DeleteDialog(
             Text(text = stringResource(R.string.hapus_desain_title))
         },
         text = {
-            Text(text = stringResource(R.string.hapus_desain_body, desain.nama))
+            Text(text = stringResource(R.string.hapus_desain_body, desain.judul))
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
