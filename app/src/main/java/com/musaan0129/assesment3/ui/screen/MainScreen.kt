@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -75,7 +74,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.musaan0129.assesment3.BuildConfig
 import com.musaan0129.assesment3.R
-import com.musaan0129.assesment3.model.Hewan
+import com.musaan0129.assesment3.model.Desain
 import com.musaan0129.assesment3.model.User
 import com.musaan0129.assesment3.network.ApiStatus
 import com.musaan0129.assesment3.network.HewanApi
@@ -104,7 +103,7 @@ fun MainScreen() {
     }
     val deleteStatus by viewModel.deleteStatus
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var selectedHewan by remember { mutableStateOf<Hewan?>(null) }
+    var selectedDesain by remember { mutableStateOf<Desain?>(null) }
     LaunchedEffect(deleteStatus) {
         if (deleteStatus != null) {
             Toast.makeText(context, deleteStatus, Toast.LENGTH_SHORT).show()
@@ -169,7 +168,7 @@ fun MainScreen() {
             userId = user.email,
             modifier = Modifier.padding(innerPadding),
             onDeleteClick = { hewan ->
-                selectedHewan = hewan
+                selectedDesain = hewan
                 showDeleteDialog = true
             }
         )
@@ -192,17 +191,17 @@ fun MainScreen() {
                 showHewanDialog = false
             }
         }
-        if (showDeleteDialog && selectedHewan != null) {
+        if (showDeleteDialog && selectedDesain != null) {
             DeleteDialog(
-                hewan = selectedHewan!!,
+                desain = selectedDesain!!,
                 onDismiss = {
                     showDeleteDialog = false
-                    selectedHewan = null
+                    selectedDesain = null
                 },
                 onConfirm = {
-                    viewModel.deleteData(user.email, selectedHewan!!.id)
+                    viewModel.deleteData(user.email, selectedDesain!!.id)
                     showDeleteDialog = false
-                    selectedHewan = null
+                    selectedDesain = null
                 }
             )
         }
@@ -214,7 +213,7 @@ fun MainScreen() {
 }
 
 @Composable
-fun ScreenContent(viewModel: MainViewModel, userId: String, onDeleteClick: (Hewan) -> Unit, modifier: Modifier = Modifier) {
+fun ScreenContent(viewModel: MainViewModel, userId: String, onDeleteClick: (Desain) -> Unit, modifier: Modifier = Modifier) {
     val data by viewModel.data
     val status by viewModel.status.collectAsState()
 
@@ -239,7 +238,7 @@ fun ScreenContent(viewModel: MainViewModel, userId: String, onDeleteClick: (Hewa
             ) {
                 items(data) {
                     ListItem(
-                        hewan = it,
+                        desain = it,
                         onDeleteClick = if (it.mine == 1) { // Hanya untuk hewan milik user
                             { onDeleteClick(it) }
                         } else null
@@ -342,7 +341,7 @@ private fun getCroppedImage(
 
 @Composable
 fun ListItem(
-    hewan: Hewan,
+    desain: Desain,
     onDeleteClick: (() -> Unit)? = null
 ) {
     Box(
@@ -354,11 +353,11 @@ fun ListItem(
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(
-                    HewanApi.getHewanUrl(hewan.imageId)
+                    HewanApi.getHewanUrl(desain.imageId)
                 )
                 .crossfade(enable = true)
                 .build(),
-            contentDescription = stringResource(R.string.gambar, hewan.nama),
+            contentDescription = stringResource(R.string.gambar, desain.nama),
             contentScale = ContentScale.Crop,
             placeholder = painterResource(id = R.drawable.loading_img),
             error = painterResource(id = R.drawable.baseline_broken_image_24),
@@ -377,12 +376,12 @@ fun ListItem(
                 modifier = Modifier.align(Alignment.CenterStart)
             ) {
                 Text(
-                    text = hewan.nama,
+                    text = desain.nama,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
-                    text = hewan.namaLatin,
+                    text = desain.namaLatin,
                     fontStyle = FontStyle.Italic,
                     fontSize = 14.sp,
                     color = Color.White

@@ -1,6 +1,6 @@
 package com.musaan0129.assesment3.network
 
-import com.musaan0129.assesment3.model.Hewan
+import com.musaan0129.assesment3.model.Desain
 import com.musaan0129.assesment3.model.OpStatus
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -9,6 +9,8 @@ import okhttp3.RequestBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.DELETE
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Multipart
@@ -16,7 +18,7 @@ import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Query
 
-private const val BASE_URL = "https://gh.d3ifcool.org/"
+private const val BASE_URL = "https://desain-api.michael-kaiser.my.id/api/"
 private val moshi = Moshi.Builder()
     .add(KotlinJsonAdapterFactory())
     .build()
@@ -25,34 +27,42 @@ private val retrofit = Retrofit.Builder()
     .baseUrl(BASE_URL)
     .build()
 
-interface HewanApiService {
-    @GET("hewan.php")
-    suspend fun getHewan(
+interface DesainApiService {
+    @GET("desain")
+    suspend fun getDesain(
         @Header("Authorization") userId: String
-    ): List<Hewan>
+    ): List<Desain>
 
     @Multipart
-    @POST("hewan.php")
-    suspend fun postHewan(
+    @POST("desain")
+    suspend fun postDesain(
         @Header("Authorization") userId: String,
         @Part("nama") nama: RequestBody,
         @Part("namaLatin") namaLatin: RequestBody,
         @Part image: MultipartBody.Part
     ): OpStatus
 
-    @DELETE("hewan.php")
-    suspend fun deleteHewan(
+    @DELETE("desain")
+    suspend fun deleteDesain(
         @Header("Authorization") userId: String,
         @Query("id") id: String
     ): OpStatus
+
+    @FormUrlEncoded
+    @POST("register")
+    suspend fun register(
+        @Field("name") nama: String,
+        @Field("email") email: String,
+        @Field("password") password: String
+    ): OpStatus
 }
 
-object HewanApi {
-    val service: HewanApiService by lazy {
-        retrofit.create(HewanApiService::class.java)
+object DesainApi {
+    val service: DesainApiService by lazy {
+        retrofit.create(DesainApiService::class.java)
     }
-    fun getHewanUrl(imageId: String): String {
-        return "${BASE_URL}image.php?id=$imageId"
+    fun getImageUrl(id: Long): String {
+        return "${BASE_URL}desain/image/$id?timestamp=${System.currentTimeMillis()}"
     }
 }
 enum class ApiStatus { LOADING, SUCCESS, FAILED}
