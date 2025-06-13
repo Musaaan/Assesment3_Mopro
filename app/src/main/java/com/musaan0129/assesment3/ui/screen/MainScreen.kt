@@ -381,6 +381,12 @@ fun ListItem(
                     fontSize = 14.sp,
                     color = Color.White
                 )
+                Text(
+                    text = desain.harga.toString(),
+                    fontStyle = FontStyle.Italic,
+                    fontSize = 14.sp,
+                    color = Color.White
+                )
             }
 
             if (onDeleteClick != null) {
