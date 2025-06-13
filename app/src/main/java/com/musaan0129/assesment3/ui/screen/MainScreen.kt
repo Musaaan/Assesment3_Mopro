@@ -1,27 +1,24 @@
 package com.musaan0129.assesment3.ui.screen
 
-import android.content.ContentResolver
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
-import android.os.Build
-import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -65,18 +62,15 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.canhub.cropper.CropImageContract
-import com.canhub.cropper.CropImageContractOptions
-import com.canhub.cropper.CropImageOptions
-import com.canhub.cropper.CropImageView
-import com.google.android.libraries.id_desainentity.googleid.GetGoogleIdOption
-import com.google.android.libraries.id_desainentity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.id_desainentity.googleid.GoogleIdTokenParsingException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.musaan0129.assesment3.BuildConfig
 import com.musaan0129.assesment3.R
 import com.musaan0129.assesment3.model.Desain
 import com.musaan0129.assesment3.model.User
 import com.musaan0129.assesment3.network.ApiStatus
+import com.musaan0129.assesment3.network.DesainApi
 import com.musaan0129.assesment3.network.UserDataStore
 import com.musaan0129.assesment3.ui.theme.Mobpro1Theme
 import kotlinx.coroutines.CoroutineScope
@@ -95,11 +89,6 @@ fun MainScreen() {
     var showDialog by remember { mutableStateOf(false) }
     var showDesainDialog by remember { mutableStateOf(false) }
 
-    var bitmap: Bitmap? by remember { mutableStateOf(null) }
-    val launcher = rememberLauncherForActivityResult(CropImageContract()) {
-        bitmap = getCroppedImage(context.contentResolver, it)
-        if (bitmap != null) showDesainDialog = true
-    }
     val deleteStatus by viewModel.deleteStatus
     var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedDesain by remember { mutableStateOf<Desain?>(null) }
@@ -124,7 +113,7 @@ fun MainScreen() {
                     IconButton(onClick = {
                         if (user.token.isEmpty()) {
                             CoroutineScope(Dispatchers.IO).launch {
-                                signIn(context, dataStore)
+                                signIn(viewModel, context, dataStore)
                             }
                         } else {
 //                            Log.d("SIGN-IN", "User: $user")
@@ -143,16 +132,7 @@ fun MainScreen() {
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                val options = CropImageContractOptions(
-                    null,
-                    CropImageOptions(
-                        imageSourceIncludeGallery = false,
-                        imageSourceIncludeCamera = true,
-                        fixAspectRatio = true
-                    )
-                )
-
-                launcher.launch(options)
+                showDesainDialog = true
             }) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -160,8 +140,7 @@ fun MainScreen() {
                 )
             }
         }
-    ){
-            innerPadding ->
+    ){ innerPadding ->
         ScreenContent(
             viewModel,
             token = user.token,
@@ -215,6 +194,18 @@ fun MainScreen() {
 fun ScreenContent(viewModel: MainViewModel, token: String, onDeleteClick: (Desain) -> Unit, modifier: Modifier = Modifier) {
     val data by viewModel.data
     val status by viewModel.status.collectAsState()
+    var showDetailDialog by remember { mutableStateOf<Desain?>(null) }
+
+    if (showDetailDialog != null) {
+        DesainDialog(
+            desain = showDetailDialog!!,
+            onDismissRequest = { showDetailDialog = null },
+            onConfirmation = { judul, manufacturer, harga, bitmap ->
+                viewModel.updateData(token, showDetailDialog!!.id_desain, judul, manufacturer, harga, bitmap)
+                showDetailDialog = null
+            }
+        )
+    }
 
     LaunchedEffect(token) {
         viewModel.retrieveData(token)
@@ -238,10 +229,12 @@ fun ScreenContent(viewModel: MainViewModel, token: String, onDeleteClick: (Desai
                 items(data) {
                     ListItem(
                         desain = it,
-                        onDeleteClick = if (it.mine == 1) { // Hanya untuk hewan milik user
+                        onDeleteClick = if (it.mine == "1") { // Hanya untuk hewan milik user
                             { onDeleteClick(it) }
                         } else null
-                    )
+                    ) {
+                        showDetailDialog = it
+                    }
                 }
             }
         }
@@ -265,7 +258,7 @@ fun ScreenContent(viewModel: MainViewModel, token: String, onDeleteClick: (Desai
     }
 }
 
-private suspend fun signIn(context: Context, dataStore: UserDataStore) {
+private suspend fun signIn(viewModel : MainViewModel, context: Context, dataStore: UserDataStore) {
     val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
         .setFilterByAuthorizedAccounts(false)
         .setServerClientId(BuildConfig.API_KEY)
@@ -277,28 +270,39 @@ private suspend fun signIn(context: Context, dataStore: UserDataStore) {
     try {
         val credentialManager = CredentialManager.create(context)
         val result = credentialManager.getCredential(context, request)
-        handleSignIn(result, dataStore)
+        handleSignIn(viewModel, result, dataStore)
     } catch (e: GetCredentialException) {
         Log.e("SIGN-IN", "Error: ${e.errorMessage}")
     }
 }
 
-private suspend fun handleSignIn(result: GetCredentialResponse, dataStore: UserDataStore) {
+private suspend fun handleSignIn(viewModel: MainViewModel, result: GetCredentialResponse, dataStore: UserDataStore) {
     val credential = result.credential
     if (credential is CustomCredential &&
         credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
         try {
             val googleId = GoogleIdTokenCredential.createFrom(credential.data)
             val nama = googleId.displayName ?: ""
-            val email = googleId.id_desain
+            val email = googleId.id
             val photoUrl = googleId.profilePictureUri.toString()
-            dataStore.saveData(
-                User(
-                    name = nama,
-                    email = email,
-                    photoUrl = photoUrl
+            val googleToken = googleId.idToken
+            if (googleToken.isNotEmpty()) {
+                val tokenWeb = viewModel.register(nama, email, googleToken)
+                if (tokenWeb.isEmpty()) {
+                    Log.e("SIGN-IN", "Error: registration failed, no token received.")
+                    return
+                }
+
+                dataStore.saveData(
+                    User(
+                        token = "Bearer $tokenWeb",
+                        name = nama,
+                        email = email,
+                        photoUrl = photoUrl
+                    )
                 )
-            )
+                Log.d("SIGN-IN", "Success: $nama, $email, $photoUrl, $tokenWeb")
+            }
         } catch (e: GoogleIdTokenParsingException) {
             Log.e("SIGN-IN", "Error: ${e.message}")
         }
@@ -319,49 +323,37 @@ private suspend fun signOut(context: Context, dataStore: UserDataStore) {
     }
 }
 
-private fun getCroppedImage(
-    resolver: ContentResolver,
-    result: CropImageView.CropResult
-): Bitmap? {
-    if (!result.isSuccessful) {
-        Log.e("IMAGE", "Error: ${result.error}")
-        return null
-    }
-
-    val uri = result.uriContent ?: return null
-
-    return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-        MediaStore.Images.Media.getBitmap(resolver, uri)
-    } else {
-        val source = ImageDecoder.createSource(resolver, uri)
-        ImageDecoder.decodeBitmap(source)
-    }
-}
-
 @Composable
 fun ListItem(
     desain: Desain,
-    onDeleteClick: (() -> Unit)? = null
+    onDeleteClick: (() -> Unit)? = null,
+    onUpdateClick: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
             .padding(4.dp)
+            .clickable {
+                if (desain.mine == "1") {
+                    onUpdateClick()
+                }
+            }
             .border(1.dp, Color.Gray),
         contentAlignment = Alignment.BottomCenter
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(
-                    HewanApi.getHewanUrl(desain.imageId)
+                    DesainApi.getImageUrl(desain.id_desain)
                 )
                 .crossfade(enable = true)
                 .build(),
-            contentDescription = stringResource(R.string.gambar, desain.nama),
+            contentDescription = stringResource(R.string.gambar, desain.judul),
             contentScale = ContentScale.Crop,
             placeholder = painterResource(id = R.drawable.loading_img),
             error = painterResource(id = R.drawable.baseline_broken_image_24),
             modifier = Modifier
                 .fillMaxWidth()
+                .aspectRatio(1f)
                 .padding(4.dp)
         )
         Box(
@@ -375,12 +367,12 @@ fun ListItem(
                 modifier = Modifier.align(Alignment.CenterStart)
             ) {
                 Text(
-                    text = desain.nama,
+                    text = desain.judul,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
-                    text = desain.namaLatin,
+                    text = desain.luas,
                     fontStyle = FontStyle.Italic,
                     fontSize = 14.sp,
                     color = Color.White
