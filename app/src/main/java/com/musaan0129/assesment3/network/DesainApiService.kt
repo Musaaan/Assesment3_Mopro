@@ -16,6 +16,7 @@ import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 private const val BASE_URL = "https://desain-api.michael-kaiser.my.id/api/"
@@ -30,22 +31,23 @@ private val retrofit = Retrofit.Builder()
 interface DesainApiService {
     @GET("desain")
     suspend fun getDesain(
-        @Header("Authorization") userId: String
+        @Header("Authorization") token: String
     ): List<Desain>
 
     @Multipart
     @POST("desain")
     suspend fun postDesain(
-        @Header("Authorization") userId: String,
-        @Part("nama") nama: RequestBody,
-        @Part("namaLatin") namaLatin: RequestBody,
+        @Header("Authorization") token: String,
+        @Part("judul") judul: RequestBody,
+        @Part("luas") luas: RequestBody,
+        @Part("harga") harga: Double,
         @Part image: MultipartBody.Part
     ): OpStatus
 
-    @DELETE("desain")
+    @DELETE("desain/{id_desain}")
     suspend fun deleteDesain(
-        @Header("Authorization") userId: String,
-        @Query("id") id: String
+        @Header("Authorization") token: String,
+        @Path("id_desain") idDesain: String
     ): OpStatus
 
     @FormUrlEncoded
