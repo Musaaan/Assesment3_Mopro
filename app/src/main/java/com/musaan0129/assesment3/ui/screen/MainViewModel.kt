@@ -39,6 +39,25 @@ class MainViewModel: ViewModel() {
         }
     }
 
+    suspend fun register(nama: String, email: String, password: String): String {
+        var token = ""
+        try {
+            val result = DesainApi.service.register(
+                nama,
+                email,
+                password
+            )
+
+            if (result.status == "success") {
+                token = result.data ?: ""
+            }
+        } catch (e: Exception) {
+            Log.e("MainViewModel", "Failure: ${e.message}")
+        }
+
+        return token
+    }
+
     fun saveData(token: String, judul: String, luas: String, harga: Double, bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -48,6 +67,31 @@ class MainViewModel: ViewModel() {
                     luas.toRequestBody("text/plain".toMediaTypeOrNull()),
                     harga,
                     bitmap.toMultipartBody()
+                )
+
+                if (result.status == "success")
+                    retrieveData(token)
+                else
+                    throw Exception(result.message)
+            } catch (e: Exception) {
+                Log.d("MainViewModel", "Failure: ${e.message}")
+                errorMessage.value = "Error: ${e.message}"
+            }
+        }
+    }
+
+    fun updateData(token: String, idDesain: Long, judul: String, luas: String, harga: Double, bitmap: Bitmap?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val imagePart = bitmap?.toMultipartBody()
+                val result = DesainApi.service.updateDesain(
+                    token,
+                    idDesain,
+                    "PUT".toRequestBody("text/plain".toMediaTypeOrNull()),
+                    judul.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    luas.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    harga,
+                    imagePart
                 )
 
                 if (result.status == "success")
