@@ -1,3 +1,3 @@
-Nama: Muhammad Dekly Junior
+Nama: Muhammad Ihsan
 
-NIM: 607062300028
+NIM: 607062300129
